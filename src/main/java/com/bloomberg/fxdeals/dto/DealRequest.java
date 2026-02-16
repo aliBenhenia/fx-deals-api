@@ -1,32 +1,15 @@
-package com.bloomberg.fxdeals.model;
+package com.bloomberg.fxdeals.dto;
 
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 
-@Entity
-@Table(name = "deals")
-public class Deal {
-
-    @Id
+public class DealRequest {
     private String dealId;
-
     private String fromCurrency;
     private String toCurrency;
     private String timestamp;
     private BigDecimal amount;
 
-    
-    public Deal() {}
 
-    public Deal(String dealId, String fromCurrency, String toCurrency, String timestamp, BigDecimal amount) {
-        this.dealId = dealId;
-        this.fromCurrency = fromCurrency;
-        this.toCurrency = toCurrency;
-        this.timestamp = timestamp;
-        this.amount = amount;
-    }
-
-  
     public String getDealId() { return dealId; }
     public void setDealId(String dealId) { this.dealId = dealId; }
 
