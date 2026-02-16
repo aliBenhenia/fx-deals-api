@@ -1,6 +1,7 @@
 package com.bloomberg.fxdeals.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public class DealResponse {
 
@@ -8,7 +9,9 @@ public class DealResponse {
     private String fromCurrency;
     private String toCurrency;
     private BigDecimal dealAmount;
-    private String dealTimestamp;
+    private LocalDateTime dealTimestamp;
+
+    // ===== Getters & Setters =====
 
     public String getDealUniqueId() {
         return dealUniqueId;
@@ -42,11 +45,11 @@ public class DealResponse {
         this.dealAmount = dealAmount;
     }
 
-    public String getDealTimestamp() {
+    public LocalDateTime getDealTimestamp() {
         return dealTimestamp;
     }
 
-    public void setDealTimestamp(String dealTimestamp) {
+    public void setDealTimestamp(LocalDateTime dealTimestamp) {
         this.dealTimestamp = dealTimestamp;
     }
 }

@@ -1,17 +1,17 @@
 package com.bloomberg.fxdeals.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Column;
-
+import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "deals")
 public class Deal {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     @Column(name = "deal_unique_id", nullable = false, unique = true)
     private String dealUniqueId;
 
@@ -25,9 +25,17 @@ public class Deal {
     private BigDecimal dealAmount;
 
     @Column(name = "deal_timestamp", nullable = false)
-    private String dealTimestamp;
+    private LocalDateTime dealTimestamp;
 
     // ===== Getters & Setters =====
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getDealUniqueId() {
         return dealUniqueId;
@@ -61,11 +69,11 @@ public class Deal {
         this.dealAmount = dealAmount;
     }
 
-    public String getDealTimestamp() {
+    public LocalDateTime getDealTimestamp() {
         return dealTimestamp;
     }
 
-    public void setDealTimestamp(String dealTimestamp) {
+    public void setDealTimestamp(LocalDateTime dealTimestamp) {
         this.dealTimestamp = dealTimestamp;
     }
 }

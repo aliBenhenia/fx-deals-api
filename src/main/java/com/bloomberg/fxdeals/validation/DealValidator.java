@@ -4,27 +4,25 @@ import com.bloomberg.fxdeals.dto.DealRequest;
 import java.math.BigDecimal;
 
 public class DealValidator {
-
+    
     public static void validate(DealRequest request) {
-
-        if (request.getDealUniqueId() == null || request.getDealUniqueId().isEmpty()) {
-            throw new IllegalArgumentException("Deal ID is required");
+        if (request.getDealUniqueId() == null || request.getDealUniqueId().trim().isEmpty()) {
+            throw new IllegalArgumentException("dealUniqueId is required");
         }
-
-        if (request.getFromCurrency() == null || request.getFromCurrency().isEmpty()) {
-            throw new IllegalArgumentException("From currency is required");
+        if (request.getFromCurrency() == null || request.getFromCurrency().trim().isEmpty()) {
+            throw new IllegalArgumentException("fromCurrency is required");
         }
-
-        if (request.getToCurrency() == null || request.getToCurrency().isEmpty()) {
-            throw new IllegalArgumentException("To currency is required");
+        if (request.getToCurrency() == null || request.getToCurrency().trim().isEmpty()) {
+            throw new IllegalArgumentException("toCurrency is required");
         }
-
-        if (request.getDealAmount() == null || request.getDealAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be > 0");
+        if (request.getDealAmount() == null) {
+            throw new IllegalArgumentException("dealAmount is required");
         }
-
-        if (request.getDealTimestamp() == null || request.getDealTimestamp().isEmpty()) {
-            throw new IllegalArgumentException("Timestamp is required");
+        if (request.getDealAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("dealAmount must be greater than 0");
+        }
+        if (request.getDealTimestamp() == null) {
+            throw new IllegalArgumentException("dealTimestamp is required");
         }
     }
 }
