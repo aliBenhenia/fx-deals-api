@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/deals")
 public class DealController {
@@ -42,7 +45,27 @@ public class DealController {
     }
 
     @GetMapping
-    public String getAllDeals() {
-        return "Deals endpoint working!";
+    public ResponseEntity<List<DealResponse>> getAllDeals() {
+        
+        
+        List<Deal> deals = dealService.getAllDeals();
+        
+       
+        List<DealResponse> responses = deals.stream()
+            .map(this::convertToResponse)
+            .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(responses);
+    }
+    
+    
+    private DealResponse convertToResponse(Deal deal) {
+        DealResponse response = new DealResponse();
+        response.setDealUniqueId(deal.getDealUniqueId());
+        response.setFromCurrency(deal.getFromCurrency());
+        response.setToCurrency(deal.getToCurrency());
+        response.setDealAmount(deal.getDealAmount());
+        response.setDealTimestamp(deal.getDealTimestamp());
+        return response;
     }
 }

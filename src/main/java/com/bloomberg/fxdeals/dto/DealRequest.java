@@ -11,7 +11,7 @@ public class DealRequest {
     private BigDecimal dealAmount;
     private LocalDateTime dealTimestamp;
 
-    // ===== Getters & Setters =====
+   
 
     public String getDealUniqueId() {
         return dealUniqueId;

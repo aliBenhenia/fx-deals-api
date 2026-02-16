@@ -27,7 +27,7 @@ public class Deal {
     @Column(name = "deal_timestamp", nullable = false)
     private LocalDateTime dealTimestamp;
 
-    // ===== Getters & Setters =====
+  
 
     public Long getId() {
         return id;
