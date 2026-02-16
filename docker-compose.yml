@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 services:
   db:
     image: postgres:15
@@ -23,6 +23,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/fxdb
       SPRING_DATASOURCE_USERNAME: fxuser
       SPRING_DATASOURCE_PASSWORD: fxpass
+      # 🟢 ADD THESE 3 LINES - CRITICAL FOR TABLE CREATION!
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
 
 volumes:
   pgdata:

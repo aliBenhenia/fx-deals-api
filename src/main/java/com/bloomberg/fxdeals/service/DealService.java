@@ -1,6 +1,9 @@
 package com.bloomberg.fxdeals.service;
 
-import org.springframework.stereotype.Service;
+import com.bloomberg.fxdeals.dto.DealRequest;
+import com.bloomberg.fxdeals.model.Deal;
 
-@Service
-public class DealService {}
+public interface DealService {
+
+    Deal createDeal(DealRequest request);
+}
