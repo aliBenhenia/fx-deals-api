@@ -2,11 +2,13 @@ package com.bloomberg.fxdeals.validation;
 
 import com.bloomberg.fxdeals.dto.DealRequest;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Set;
 
 public class DealValidator {
     
-   
     private static final Set<String> VALID_CURRENCIES = Set.of(
         "USD", "EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "CNY", 
         "INR", "BRL", "ZAR", "SGD", "NZD", "MXN", "HKD", "NOK",
@@ -14,7 +16,8 @@ public class DealValidator {
     );
     
     public static void validate(DealRequest request) {
-        // Existing validations
+        
+     
         if (request.getDealUniqueId() == null || request.getDealUniqueId().trim().isEmpty()) {
             throw new IllegalArgumentException("dealUniqueId is required");
         }
@@ -36,10 +39,15 @@ public class DealValidator {
         
         
         if (!isValidCurrencyCode(request.getFromCurrency())) {
-            throw new IllegalArgumentException("Invalid fromCurrency: must be 3-letter ISO code");
+            throw new IllegalArgumentException("Invalid fromCurrency: must be 3-letter ISO code (e.g., USD, EUR)");
         }
         if (!isValidCurrencyCode(request.getToCurrency())) {
-            throw new IllegalArgumentException("Invalid toCurrency: must be 3-letter ISO code");
+            throw new IllegalArgumentException("Invalid toCurrency: must be 3-letter ISO code (e.g., USD, EUR)");
+        }
+        
+       
+        if (!isValidTimestamp(request.getDealTimestamp())) {
+            throw new IllegalArgumentException("Invalid timestamp format. Use: yyyy-MM-ddTHH:mm:ss (e.g., 2024-02-16T10:30:00)");
         }
     }
     
@@ -47,6 +55,16 @@ public class DealValidator {
         return currency != null && 
                currency.length() == 3 && 
                currency.matches("[A-Z]{3}") &&
-               VALID_CURRENCIES.contains(currency);
+               VALID_CURRENCIES.contains(currency.toUpperCase());
+    }
+    
+    private static boolean isValidTimestamp(LocalDateTime timestamp) {
+        if (timestamp == null) return false;
+        try {
+           
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

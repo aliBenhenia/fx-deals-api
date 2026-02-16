@@ -27,13 +27,13 @@ public class DealController {
     @PostMapping
     public ResponseEntity<DealResponse> createDeal(@RequestBody DealRequest request) {
 
-        // Validate request
+      
         DealValidator.validate(request);
 
-        // Process deal
+      
         Deal deal = dealService.createDeal(request);
 
-        // Build response
+    
         DealResponse response = new DealResponse();
         response.setDealUniqueId(deal.getDealUniqueId());
         response.setFromCurrency(deal.getFromCurrency());
