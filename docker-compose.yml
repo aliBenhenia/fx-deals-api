@@ -19,14 +19,19 @@ services:
       - "8080:8080"
     depends_on:
       - db
+    volumes:
+      - ./src:/app/src                # 🟢 LIVE CODE SYNC!
+      - ./pom.xml:/app/pom.xml        # 🟢 Sync pom.xml for dependencies
+      - ~/.m2:/root/.m2               # 🟢 Cache Maven dependencies
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/fxdb
       SPRING_DATASOURCE_USERNAME: fxuser
       SPRING_DATASOURCE_PASSWORD: fxpass
-      # 🟢 ADD THESE 3 LINES - CRITICAL FOR TABLE CREATION!
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: "true"
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+      # 🟢 DEVELOPMENT MODE
+      SPRING_DEVTOOLS_RESTART_ENABLED: "true"   # Auto-restart on changes
 
 volumes:
   pgdata:

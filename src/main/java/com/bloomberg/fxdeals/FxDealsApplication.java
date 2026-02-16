@@ -10,3 +10,4 @@ public class FxDealsApplication {
         SpringApplication.run(FxDealsApplication.class, args);
     }
 }
+ 
