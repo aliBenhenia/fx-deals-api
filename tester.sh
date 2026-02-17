@@ -1,292 +1,399 @@
 #!/bin/bash
 
 # =============================================
-# JACOCO COVERAGE TEST SUITE
-# Tests all parts of JaCoCo coverage
+# COMPLETE API TEST SUITE USING CURL
+# FIXED TIMESTAMP FORMAT
 # =============================================
 
-# Color definitions
+BASE_URL="http://localhost:8080/api/deals"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Initialize counters
-PASS=0
-FAIL=0
-TOTAL=0
+# Helper function to get timestamp in correct format (no timezone)
+get_timestamp() {
+    # Format: YYYY-MM-DDTHH:MM:SS
+    date +"%Y-%m-%dT%H:%M:%S"
+}
 
-# =============================================
-# Helper Functions (MUST be defined first!)
-# =============================================
+get_timestamp_days_ago() {
+    days=$1
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        date -v-${days}d +"%Y-%m-%dT%H:%M:%S"
+    else
+        # Linux
+        date -d "$days days ago" +"%Y-%m-%dT%H:%M:%S"
+    fi
+}
+
+get_timestamp_days_ahead() {
+    days=$1
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        date -v+${days}d +"%Y-%m-%dT%H:%M:%S"
+    else
+        # Linux
+        date -d "$days days" +"%Y-%m-%dT%H:%M:%S"
+    fi
+}
+
 print_header() {
     echo -e "\n${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
     echo -e "${BLUE}========================================${NC}"
 }
 
-print_section() {
-    echo -e "\n${YELLOW}📌 $1${NC}"
-    echo -e "${YELLOW}--------------------${NC}"
-}
-
 print_result() {
-    TOTAL=$((TOTAL+1))
     if [ $1 -eq 0 ]; then
-        echo -e "${GREEN}  ✅ PASS: $2${NC}"
-        PASS=$((PASS+1))
+        echo -e "${GREEN}  ✅ $2${NC}"
     else
-        echo -e "${RED}  ❌ FAIL: $2${NC}"
-        FAIL=$((FAIL+1))
+        echo -e "${RED}  ❌ $2${NC}"
     fi
 }
 
 # =============================================
-# 1. CHECK JACOCO IS CONFIGURED IN POM.XML
+# 1. HEALTH CHECK
 # =============================================
-print_section "1. CHECKING JACOCO CONFIGURATION"
+print_header "1. HEALTH CHECK"
 
-if grep -q "jacoco-maven-plugin" pom.xml; then
-    print_result 0 "JaCoCo plugin configured in pom.xml"
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/health)
+if [ "$RESPONSE" -eq 200 ]; then
+    print_result 0 "Health check passed (200 OK)"
 else
-    print_result 1 "JaCoCo plugin NOT found in pom.xml"
-fi
-
-if grep -q "<minimum>1.00</minimum>" pom.xml; then
-    print_result 0 "100% coverage target configured"
-else
-    print_result 1 "100% coverage target NOT configured"
+    print_result 1 "Health check failed (got $RESPONSE)"
 fi
 
 # =============================================
-# 2. RUN TESTS WITH COVERAGE
+# 2. CREATE VALID DEALS
 # =============================================
-print_section "2. RUNNING TESTS WITH COVERAGE"
+print_header "2. CREATE VALID DEALS"
 
-echo "Running mvn clean test..."
-docker-compose run --rm app mvn clean test > test-output.log 2>&1
-
-if [ $? -eq 0 ]; then
-    print_result 0 "Tests executed successfully"
+# Test 2.1: Valid deal with current timestamp
+echo -e "\n${YELLOW}Test 2.1: Valid deal with current time${NC}"
+UNIQUE_ID="VALID_$(date +%s)"
+CURRENT_TIME=$(get_timestamp)
+RESPONSE=$(curl -s -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"$UNIQUE_ID\",
+    \"fromCurrency\": \"USD\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"$CURRENT_TIME\"
+  }")
+if [[ "$RESPONSE" == *"$UNIQUE_ID"* ]]; then
+    print_result 0 "Created deal with ID: $UNIQUE_ID"
 else
-    print_result 1 "Tests failed to execute"
-    cat test-output.log | tail -20
+    print_result 1 "Failed to create deal"
+    echo "$RESPONSE"
+fi
+
+# Test 2.2: Valid deal with yesterday's date (within 30 days)
+echo -e "\n${YELLOW}Test 2.2: Valid deal with yesterday's date${NC}"
+UNIQUE_ID="YESTERDAY_$(date +%s)"
+YESTERDAY=$(get_timestamp_days_ago 1)
+RESPONSE=$(curl -s -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"$UNIQUE_ID\",
+    \"fromCurrency\": \"GBP\",
+    \"toCurrency\": \"JPY\",
+    \"dealAmount\": 2500.75,
+    \"dealTimestamp\": \"$YESTERDAY\"
+  }")
+if [[ "$RESPONSE" == *"$UNIQUE_ID"* ]]; then
+    print_result 0 "Created deal with yesterday's date"
+else
+    print_result 1 "Failed with yesterday's date"
+fi
+
+# Test 2.3: Valid deal with tomorrow's date (within 1 day)
+echo -e "\n${YELLOW}Test 2.3: Valid deal with tomorrow's date${NC}"
+UNIQUE_ID="TOMORROW_$(date +%s)"
+TOMORROW=$(get_timestamp_days_ahead 1)
+RESPONSE=$(curl -s -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"$UNIQUE_ID\",
+    \"fromCurrency\": \"EUR\",
+    \"toCurrency\": \"USD\",
+    \"dealAmount\": 800.25,
+    \"dealTimestamp\": \"$TOMORROW\"
+  }")
+if [[ "$RESPONSE" == *"$UNIQUE_ID"* ]]; then
+    print_result 0 "Created deal with tomorrow's date"
+else
+    print_result 1 "Failed with tomorrow's date"
 fi
 
 # =============================================
-# 3. CHECK JACOCO EXECUTION DATA FILE
+# 3. VALIDATION TESTS (Should Fail with 400)
 # =============================================
-print_section "3. CHECKING JACOCO EXECUTION DATA"
+print_header "3. VALIDATION TESTS (Expected 400)"
 
-if grep -q "Loading execution data file" test-output.log; then
-    print_result 0 "JaCoCo execution data file loaded"
+# Test 3.1: Missing dealUniqueId
+echo -e "\n${YELLOW}Test 3.1: Missing dealUniqueId${NC}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fromCurrency": "USD",
+    "toCurrency": "EUR",
+    "dealAmount": 1000.50,
+    "dealTimestamp": "2024-02-17T10:30:00"
+  }')
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Correctly rejected - missing dealUniqueId"
 else
-    print_result 1 "JaCoCo execution data file NOT found"
+    print_result 1 "Expected 400, got $HTTP_CODE"
+fi
+
+# Test 3.2: Missing fromCurrency
+echo -e "\n${YELLOW}Test 3.2: Missing fromCurrency${NC}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"MISSING_FROM_$(date +%s)\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"2024-02-17T10:30:00\"
+  }")
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Correctly rejected - missing fromCurrency"
+else
+    print_result 1 "Expected 400, got $HTTP_CODE"
+fi
+
+# Test 3.3: Negative amount
+echo -e "\n${YELLOW}Test 3.3: Negative amount${NC}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"NEG_$(date +%s)\",
+    \"fromCurrency\": \"USD\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": -100,
+    \"dealTimestamp\": \"2024-02-17T10:30:00\"
+  }")
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Correctly rejected - negative amount"
+else
+    print_result 1 "Expected 400, got $HTTP_CODE"
+fi
+
+# Test 3.4: Zero amount
+echo -e "\n${YELLOW}Test 3.4: Zero amount${NC}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"ZERO_$(date +%s)\",
+    \"fromCurrency\": \"USD\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 0,
+    \"dealTimestamp\": \"2024-02-17T10:30:00\"
+  }")
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Correctly rejected - zero amount"
+else
+    print_result 1 "Expected 400, got $HTTP_CODE"
 fi
 
 # =============================================
-# 4. GENERATE COVERAGE REPORT
+# 4. CURRENCY VALIDATION TESTS
 # =============================================
-print_section "4. GENERATING COVERAGE REPORT"
+print_header "4. CURRENCY VALIDATION TESTS"
 
-docker-compose run --rm app mvn jacoco:report > report-output.log 2>&1
-
-if [ $? -eq 0 ]; then
-    print_result 0 "Coverage report generated"
+# Test 4.1: Invalid currency (too long)
+echo -e "\n${YELLOW}Test 4.1: Invalid currency (USDOLLAR)${NC}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"CURR_LONG_$(date +%s)\",
+    \"fromCurrency\": \"USDOLLAR\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"2024-02-17T10:30:00\"
+  }")
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Rejected - currency too long"
 else
-    print_result 1 "Coverage report generation failed"
+    print_result 1 "Expected 400, got $HTTP_CODE"
+fi
+
+# Test 4.2: Invalid currency (too short)
+echo -e "\n${YELLOW}Test 4.2: Invalid currency (US)${NC}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"CURR_SHORT_$(date +%s)\",
+    \"fromCurrency\": \"US\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"2024-02-17T10:30:00\"
+  }")
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Rejected - currency too short"
+else
+    print_result 1 "Expected 400, got $HTTP_CODE"
+fi
+
+# Test 4.3: Invalid currency (lowercase)
+echo -e "\n${YELLOW}Test 4.3: Invalid currency (usd)${NC}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"CURR_LOW_$(date +%s)\",
+    \"fromCurrency\": \"usd\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"2024-02-17T10:30:00\"
+  }")
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Rejected - lowercase currency"
+else
+    print_result 1 "Expected 400, got $HTTP_CODE"
+fi
+
+# Test 4.4: Invalid currency (not in list)
+echo -e "\n${YELLOW}Test 4.4: Invalid currency (XXX)${NC}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"CURR_XXX_$(date +%s)\",
+    \"fromCurrency\": \"XXX\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"2024-02-17T10:30:00\"
+  }")
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Rejected - currency not in list"
+else
+    print_result 1 "Expected 400, got $HTTP_CODE"
 fi
 
 # =============================================
-# 5. CHECK REPORT FILES
+# 5. TIMESTAMP VALIDATION TESTS
 # =============================================
-print_section "5. CHECKING REPORT FILES"
+print_header "5. TIMESTAMP VALIDATION TESTS"
 
-# Create reports directory
-mkdir -p target/coverage
+# Test 5.1: Timestamp too old (31 days ago)
+echo -e "\n${YELLOW}Test 5.1: Timestamp too old (31 days ago)${NC}"
+OLD_DATE=$(get_timestamp_days_ago 31)
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"OLD_$(date +%s)\",
+    \"fromCurrency\": \"USD\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"$OLD_DATE\"
+  }")
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Rejected - timestamp too old"
+else
+    print_result 1 "Expected 400, got $HTTP_CODE"
+fi
 
-# Try to copy report from container
-if docker cp $(docker-compose ps -q app):/app/target/site/jacoco ./target/coverage 2>/dev/null; then
-    if [ -f "./target/coverage/jacoco/index.html" ]; then
-        print_result 0 "HTML coverage report found"
-    else
-        print_result 1 "HTML coverage report NOT found"
-    fi
+# Test 5.2: Timestamp too future (2 days ahead)
+echo -e "\n${YELLOW}Test 5.2: Timestamp too future (2 days ahead)${NC}"
+FUTURE_DATE=$(get_timestamp_days_ahead 2)
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"FUTURE_$(date +%s)\",
+    \"fromCurrency\": \"USD\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"$FUTURE_DATE\"
+  }")
+if [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 0 "Rejected - timestamp too future"
+else
+    print_result 1 "Expected 400, got $HTTP_CODE"
+fi
+
+# =============================================
+# 6. DUPLICATE PREVENTION TEST
+# =============================================
+print_header "6. DUPLICATE PREVENTION TEST"
+
+# Create a deal
+DUPLICATE_ID="DUP_$(date +%s)"
+CURRENT_TIME=$(get_timestamp)
+echo -e "\n${YELLOW}Creating first deal with ID: $DUPLICATE_ID${NC}"
+curl -s -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"$DUPLICATE_ID\",
+    \"fromCurrency\": \"USD\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"$CURRENT_TIME\"
+  }" > /dev/null
+
+# Try to create duplicate
+echo -e "\n${YELLOW}Attempting duplicate with same ID${NC}"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"dealUniqueId\": \"$DUPLICATE_ID\",
+    \"fromCurrency\": \"USD\",
+    \"toCurrency\": \"EUR\",
+    \"dealAmount\": 1000.50,
+    \"dealTimestamp\": \"$CURRENT_TIME\"
+  }")
+if [ "$HTTP_CODE" -eq 409 ]; then
+    print_result 0 "Duplicate correctly rejected with 409"
+elif [ "$HTTP_CODE" -eq 400 ]; then
+    print_result 1 "Got 400 instead of 409 - check error handling"
+else
+    print_result 1 "Expected 409, got $HTTP_CODE"
+fi
+
+# =============================================
+# 7. BATCH TEST - MULTIPLE CURRENCY PAIRS
+# =============================================
+print_header "7. BATCH TEST - MULTIPLE CURRENCIES"
+
+CURRENCIES=("USD:EUR" "GBP:JPY" "EUR:CHF" "CAD:AUD" "CNY:USD")
+PASSED=0
+CURRENT_TIME=$(get_timestamp)
+
+for i in {1..5}; do
+    IFS=':' read -r FROM TO <<< "${CURRENCIES[$((i-1))]}"
+    UNIQUE_ID="BATCH_$(date +%s)_$i"
     
-    if [ -f "./target/coverage/jacoco/jacoco.xml" ]; then
-        print_result 0 "XML coverage report found"
-    else
-        print_result 1 "XML coverage report NOT found"
-    fi
-else
-    # Check if report exists locally
-    if [ -f "./target/site/jacoco/index.html" ]; then
-        print_result 0 "HTML coverage report found locally"
-        cp -r ./target/site/jacoco ./target/coverage/
-    else
-        print_result 1 "HTML coverage report NOT found anywhere"
-    fi
+    echo -e "\n${YELLOW}Testing $FROM → $TO${NC}"
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"dealUniqueId\": \"$UNIQUE_ID\",
+        \"fromCurrency\": \"$FROM\",
+        \"toCurrency\": \"$TO\",
+        \"dealAmount\": 100$i,
+        \"dealTimestamp\": \"$CURRENT_TIME\"
+      }")
     
-    if [ -f "./target/site/jacoco/jacoco.xml" ]; then
-        print_result 0 "XML coverage report found locally"
+    if [ "$HTTP_CODE" -eq 201 ]; then
+        PASSED=$((PASSED+1))
+        echo "    ✓ $FROM→$TO: $HTTP_CODE"
     else
-        print_result 1 "XML coverage report NOT found anywhere"
+        echo "    ✗ $FROM→$TO: $HTTP_CODE"
     fi
-fi
-
-# =============================================
-# 6. CHECK COVERAGE PERCENTAGES
-# =============================================
-print_section "6. CHECKING COVERAGE PERCENTAGES"
-
-if [ -f "./target/coverage/jacoco/jacoco.xml" ] || [ -f "./target/site/jacoco/jacoco.xml" ]; then
-    print_result 0 "Coverage data available"
-    
-    # Extract and display coverage info
-    REPORT_FILE="./target/coverage/jacoco/jacoco.xml"
-    [ ! -f "$REPORT_FILE" ] && REPORT_FILE="./target/site/jacoco/jacoco.xml"
-    
-    if [ -f "$REPORT_FILE" ]; then
-        INSTRUCTION_COVERED=$(grep -o 'instruction covered="[0-9]*"' "$REPORT_FILE" | head -1 | grep -o '[0-9]*')
-        INSTRUCTION_MISSED=$(grep -o 'instruction missed="[0-9]*"' "$REPORT_FILE" | head -1 | grep -o '[0-9]*')
-        echo -e "  ${YELLOW}Coverage metrics found${NC}"
-    fi
-else
-    print_result 1 "Cannot check coverage - report missing"
-fi
-
-# =============================================
-# 7. VERIFY 100% COVERAGE TARGET
-# =============================================
-print_section "7. VERIFYING 100% COVERAGE TARGET"
-
-docker-compose run --rm app mvn clean verify > verify-output.log 2>&1
-VERIFY_EXIT=$?
-
-if [ $VERIFY_EXIT -eq 0 ]; then
-    print_result 0 "Coverage check passed (meets 100% target)"
-else
-    if grep -q "Coverage checks have failed" verify-output.log; then
-        print_result 1 "Coverage check FAILED - below 100%"
-        echo -e "${RED}  ⚠️  Some packages have less than 100% coverage${NC}"
-    else
-        print_result 1 "Coverage check failed for other reasons"
-    fi
-fi
-
-# =============================================
-# 8. CHECK EXCLUDED CLASSES
-# =============================================
-print_section "8. CHECKING EXCLUDED CLASSES"
-
-EXCLUSIONS=("FxDealsApplication" "dto" "config" "aspect" "exception")
-EXCLUSIONS_FOUND=0
-
-for EXCLUSION in "${EXCLUSIONS[@]}"; do
-    if grep -q "<exclude>.*$EXCLUSION.*</exclude>" pom.xml; then
-        EXCLUSIONS_FOUND=$((EXCLUSIONS_FOUND+1))
-    fi
+    sleep 1
 done
 
-if [ $EXCLUSIONS_FOUND -eq 5 ]; then
-    print_result 0 "All excluded classes configured properly"
+if [ "$PASSED" -eq 5 ]; then
+    print_result 0 "All 5 currency pairs accepted"
 else
-    print_result 1 "Some exclusions missing (found $EXCLUSIONS_FOUND/5)"
-fi
-
-# =============================================
-# 9. CHECK MAKEFILE COVERAGE COMMANDS
-# =============================================
-print_section "9. CHECKING MAKEFILE COVERAGE COMMANDS"
-
-if [ -f "Makefile" ]; then
-    if grep -q "^coverage:" Makefile; then
-        print_result 0 "Makefile has 'coverage' command"
-    else
-        print_result 1 "Makefile missing 'coverage' command"
-    fi
-    
-    if grep -q "^coverage-report:" Makefile; then
-        print_result 0 "Makefile has 'coverage-report' command"
-    else
-        print_result 1 "Makefile missing 'coverage-report' command"
-    fi
-    
-    if grep -q "^coverage-check:" Makefile; then
-        print_result 0 "Makefile has 'coverage-check' command"
-    else
-        print_result 1 "Makefile missing 'coverage-check' command"
-    fi
-else
-    print_result 1 "Makefile not found"
-fi
-
-# =============================================
-# 10. CHECK README DOCUMENTATION
-# =============================================
-print_section "10. CHECKING README DOCUMENTATION"
-
-if [ -f "README.md" ]; then
-    if grep -q "JaCoCo" README.md; then
-        print_result 0 "README mentions JaCoCo"
-    else
-        print_result 1 "README missing JaCoCo documentation"
-    fi
-    
-    if grep -q "100% coverage" README.md; then
-        print_result 0 "README mentions 100% coverage target"
-    else
-        print_result 1 "README missing 100% coverage target"
-    fi
-    
-    if grep -q "excluded classes" README.md; then
-        print_result 0 "README explains excluded classes"
-    else
-        print_result 1 "README missing exclusions explanation"
-    fi
-else
-    print_result 1 "README.md not found"
-fi
-
-# =============================================
-# 11. COVERAGE REPORT PREVIEW
-# =============================================
-print_section "11. COVERAGE REPORT PREVIEW"
-
-if [ -f "./target/coverage/jacoco/index.html" ]; then
-    echo -e "${GREEN}  📊 Coverage report available at:${NC}"
-    echo -e "     ./target/coverage/jacoco/index.html"
-    echo -e "\n${YELLOW}  To view in browser:${NC}"
-    echo "     open ./target/coverage/jacoco/index.html"
-elif [ -f "./target/site/jacoco/index.html" ]; then
-    echo -e "${GREEN}  📊 Coverage report available at:${NC}"
-    echo -e "     ./target/site/jacoco/index.html"
-else
-    echo -e "${YELLOW}  ⚠️  Report not available - run 'make coverage' first${NC}"
+    print_result 1 "Only $PASSED/5 currency pairs accepted"
 fi
 
 # =============================================
 # SUMMARY
 # =============================================
-print_header "📊 JACOCO COVERAGE TEST SUMMARY"
-
-echo -e "\n${GREEN}✅ PASSED: $PASS${NC}"
-echo -e "${RED}❌ FAILED: $FAIL${NC}"
-echo -e "${BLUE}📋 TOTAL:  $TOTAL${NC}"
-
-if [ $TOTAL -gt 0 ]; then
-    PERCENT=$((PASS * 100 / TOTAL))
-    echo -e "${YELLOW}📈 SUCCESS RATE: ${PERCENT}%${NC}"
-fi
-
-if [ $FAIL -eq 0 ]; then
-    echo -e "\n${GREEN}🎉 ALL JACOCO TESTS PASSED! Coverage is properly configured!${NC}"
-elif [ $FAIL -le 2 ]; then
-    echo -e "\n${YELLOW}⚠️  Minor issues found - check the failures above${NC}"
-else
-    echo -e "\n${RED}❌ Multiple failures - JaCoCo configuration needs work${NC}"
-fi
-
-# Cleanup
-rm -f test-output.log report-output.log verify-output.log 2>/dev/null
+print_header "✅ TEST SUMMARY"
+echo -e "\n${GREEN}All curl tests completed!${NC}"
+echo -e "${YELLOW}Check the results above for any failures${NC}"

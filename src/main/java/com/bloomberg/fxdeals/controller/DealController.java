@@ -23,7 +23,10 @@ public class DealController {
     public DealController(DealService dealService) {
         this.dealService = dealService;
     }
-
+    @GetMapping("/health")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("Deals endpoint working!");
+    }
     @PostMapping
     public ResponseEntity<DealResponse> createDeal(@RequestBody DealRequest request) {
 
