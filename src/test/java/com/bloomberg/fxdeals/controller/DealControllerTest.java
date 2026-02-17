@@ -42,29 +42,29 @@ class DealControllerTest {
     private LocalDateTime now;
 
     @BeforeEach
-    void setUp() {
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-    
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        void setUp() {
+            objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
         
-        now = LocalDateTime.now();
-        
-        validRequest = new DealRequest();
-        validRequest.setDealUniqueId("TEST123");
-        validRequest.setFromCurrency("USD");
-        validRequest.setToCurrency("EUR");
-        validRequest.setDealAmount(new BigDecimal("1000.50"));
-        validRequest.setDealTimestamp(now);  // Use current time
+            objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            
+            now = LocalDateTime.now();
+            
+            validRequest = new DealRequest();
+            validRequest.setDealUniqueId("TEST123");
+            validRequest.setFromCurrency("USD");
+            validRequest.setToCurrency("EUR");
+            validRequest.setDealAmount(new BigDecimal("1000.50"));
+            validRequest.setDealTimestamp(now);  // Use current time
 
-        validDeal = new Deal();
-        validDeal.setId(1L);
-        validDeal.setDealUniqueId("TEST123");
-        validDeal.setFromCurrency("USD");
-        validDeal.setToCurrency("EUR");
-        validDeal.setDealAmount(new BigDecimal("1000.50"));
-        validDeal.setDealTimestamp(now);
-    }
+            validDeal = new Deal();
+            validDeal.setId(1L);
+            validDeal.setDealUniqueId("TEST123");
+            validDeal.setFromCurrency("USD");
+            validDeal.setToCurrency("EUR");
+            validDeal.setDealAmount(new BigDecimal("1000.50"));
+            validDeal.setDealTimestamp(now);
+        }
 
     @Test
     void createDeal_ShouldReturn201_WhenValidRequest() throws Exception {
