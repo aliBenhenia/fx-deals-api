@@ -1,0 +1,88 @@
+{
+  "info": {
+    "name": "FX Deals API - Assignment Tests",
+    "description": "6 required test cases for Bloomberg assignment",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. ✅ SUCCESS - Create Valid Deal",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dealUniqueId\": \"DEAL_{{timestamp}}\",\n  \"fromCurrency\": \"USD\",\n  \"toCurrency\": \"EUR\",\n  \"dealAmount\": 1000.50,\n  \"dealTimestamp\": \"2024-02-17T10:30:00\"\n}"
+        },
+        "url": "{{base_url}}/api/deals"
+      }
+    },
+    {
+      "name": "2. ❌ VALIDATION - Missing dealUniqueId",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fromCurrency\": \"USD\",\n  \"toCurrency\": \"EUR\",\n  \"dealAmount\": 1000.50,\n  \"dealTimestamp\": \"2024-02-17T10:30:00\"\n}"
+        },
+        "url": "{{base_url}}/api/deals"
+      }
+    },
+    {
+      "name": "3. ❌ VALIDATION - Negative Amount",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dealUniqueId\": \"NEG_{{timestamp}}\",\n  \"fromCurrency\": \"USD\",\n  \"toCurrency\": \"EUR\",\n  \"dealAmount\": -100,\n  \"dealTimestamp\": \"2024-02-17T10:30:00\"\n}"
+        },
+        "url": "{{base_url}}/api/deals"
+      }
+    },
+    {
+      "name": "4. ❌ VALIDATION - Invalid Currency (USDOLLAR)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dealUniqueId\": \"CURR_{{timestamp}}\",\n  \"fromCurrency\": \"USDOLLAR\",\n  \"toCurrency\": \"EUR\",\n  \"dealAmount\": 1000.50,\n  \"dealTimestamp\": \"2024-02-17T10:30:00\"\n}"
+        },
+        "url": "{{base_url}}/api/deals"
+      }
+    },
+    {
+      "name": "5. ❌ VALIDATION - Wrong Timestamp (DD-MM-YYYY)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dealUniqueId\": \"DATE_{{timestamp}}\",\n  \"fromCurrency\": \"USD\",\n  \"toCurrency\": \"EUR\",\n  \"dealAmount\": 1000.50,\n  \"dealTimestamp\": \"16-02-2024\"\n}"
+        },
+        "url": "{{base_url}}/api/deals"
+      }
+    },
+    {
+      "name": "6. 🔁 DUPLICATE - Same ID (Run TWICE)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dealUniqueId\": \"DUP_{{timestamp}}\",\n  \"fromCurrency\": \"USD\",\n  \"toCurrency\": \"EUR\",\n  \"dealAmount\": 500.00,\n  \"dealTimestamp\": \"2024-02-17T10:30:00\"\n}"
+        },
+        "url": "{{base_url}}/api/deals"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "localhost:8080",
+      "type": "string"
+    }
+  ]
+}
