@@ -30,12 +30,15 @@ public class AssignmentApiTest {
         RestAssured.port = port;
         RestAssured.baseURI = "http://localhost";
         RestAssured.basePath = "/api/deals";
+        // Clean database before each test
+        dealRepository.deleteAll();
     }
 
-    // 1️⃣ FIELD ACCEPTANCE - Success
+    // 1️⃣ FIELD ACCEPTANCE - Success (FIXED: dynamic ID)
     @Test
     void createValidDeal_ShouldReturn201() {
-        DealRequest request = createRequest("TEST-001");
+        String uniqueId = "TEST-001-" + System.currentTimeMillis();  // ← FIXED
+        DealRequest request = createRequest(uniqueId);
         
         given()
             .contentType(ContentType.JSON)
@@ -44,10 +47,10 @@ public class AssignmentApiTest {
             .post()
         .then()
             .statusCode(201)
-            .body("dealUniqueId", equalTo("TEST-001"));
+            .body("dealUniqueId", equalTo(uniqueId));
     }
 
-    // 2️⃣ ROW LEVEL VALIDATION - Missing field
+    
     @Test
     void missingDealUniqueId_ShouldReturn400() {
         DealRequest request = createRequest(null);
@@ -61,10 +64,11 @@ public class AssignmentApiTest {
             .statusCode(400);
     }
 
-    // 2️⃣ ROW LEVEL VALIDATION - Invalid currency
+   
     @Test
     void invalidCurrency_ShouldReturn400() {
-        DealRequest request = createRequest("TEST-003");
+        String uniqueId = "TEST-003-" + System.currentTimeMillis();  // ← FIXED
+        DealRequest request = createRequest(uniqueId);
         request.setFromCurrency("USDOLLAR");
         
         given()
@@ -76,10 +80,11 @@ public class AssignmentApiTest {
             .statusCode(400);
     }
 
-    // 2️⃣ ROW LEVEL VALIDATION - Negative amount
+    
     @Test
     void negativeAmount_ShouldReturn400() {
-        DealRequest request = createRequest("TEST-004");
+        String uniqueId = "TEST-004-" + System.currentTimeMillis();  // ← FIXED
+        DealRequest request = createRequest(uniqueId);
         request.setDealAmount(new BigDecimal("-100"));
         
         given()
@@ -91,16 +96,16 @@ public class AssignmentApiTest {
             .statusCode(400);
     }
 
-    // 3️⃣ DUPLICATE PREVENTION
+   
     @Test
     void duplicateDealId_ShouldReturn409() {
-        String id = "DUP-001";
+        String id = "DUP-001-" + System.currentTimeMillis();  
         DealRequest request = createRequest(id);
         
-        // First request - should succeed
+       
         given().contentType(ContentType.JSON).body(request).post().then().statusCode(201);
         
-        // Second request - should fail with 409
+      
         given()
             .contentType(ContentType.JSON)
             .body(request)
@@ -111,34 +116,35 @@ public class AssignmentApiTest {
             .body("message", containsString("already exists"));
     }
 
-    // 4️⃣ NO ROLLBACK / PARTIAL SUCCESS
+   
     @Test
     void batchWithDuplicate_ValidRecordsSaved() {
         String prefix = "BATCH-" + System.currentTimeMillis();
         
-        // Valid deal 1
+       
         DealRequest valid1 = createRequest(prefix + "-1");
         given().contentType(ContentType.JSON).body(valid1).post().then().statusCode(201);
         
-        // Valid deal 2 (will be duplicated)
+       
         DealRequest valid2 = createRequest(prefix + "-2");
         given().contentType(ContentType.JSON).body(valid2).post().then().statusCode(201);
         
-        // Try duplicate of valid2
+       
         given().contentType(ContentType.JSON).body(valid2).post().then().statusCode(409);
         
-        // Valid deal 3
+        
         DealRequest valid3 = createRequest(prefix + "-3");
         given().contentType(ContentType.JSON).body(valid3).post().then().statusCode(201);
         
-        // Verify all valid deals were saved
+       
         given().get().then().statusCode(200);
     }
 
-    // 5️⃣ EDGE CASES - Minimum amount
+    /
     @Test
     void minimumAmount_ShouldSucceed() {
-        DealRequest request = createRequest("MIN-001");
+        String uniqueId = "MIN-001-" + System.currentTimeMillis();  // ← FIXED
+        DealRequest request = createRequest(uniqueId);
         request.setDealAmount(new BigDecimal("0.01"));
         
         given()
@@ -150,7 +156,7 @@ public class AssignmentApiTest {
             .statusCode(201);
     }
 
-    // Helper method
+    
     private DealRequest createRequest(String id) {
         DealRequest request = new DealRequest();
         request.setDealUniqueId(id);
