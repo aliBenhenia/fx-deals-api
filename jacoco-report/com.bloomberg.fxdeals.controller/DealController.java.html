@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DealController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">fxdeals</a> &gt; <a href="index.source.html" class="el_package">com.bloomberg.fxdeals.controller</a> &gt; <span class="el_source">DealController.java</span></div><h1>DealController.java</h1><pre class="source lang-java linenums">package com.bloomberg.fxdeals.controller;
+
+import com.bloomberg.fxdeals.dto.DealRequest;
+import com.bloomberg.fxdeals.dto.DealResponse;
+import com.bloomberg.fxdeals.model.Deal;
+import com.bloomberg.fxdeals.service.DealService;
+import com.bloomberg.fxdeals.validation.DealValidator;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping(&quot;/api/deals&quot;)
+public class DealController {
+
+    private final DealService dealService;
+
+    @Autowired
+<span class="fc" id="L23">    public DealController(DealService dealService) {</span>
+<span class="fc" id="L24">        this.dealService = dealService;</span>
+<span class="fc" id="L25">    }</span>
+
+    @PostMapping
+    public ResponseEntity&lt;DealResponse&gt; createDeal(@RequestBody DealRequest request) {
+
+      
+<span class="fc" id="L31">        DealValidator.validate(request);</span>
+
+      
+<span class="fc" id="L34">        Deal deal = dealService.createDeal(request);</span>
+
+    
+<span class="fc" id="L37">        DealResponse response = new DealResponse();</span>
+<span class="fc" id="L38">        response.setDealUniqueId(deal.getDealUniqueId());</span>
+<span class="fc" id="L39">        response.setFromCurrency(deal.getFromCurrency());</span>
+<span class="fc" id="L40">        response.setToCurrency(deal.getToCurrency());</span>
+<span class="fc" id="L41">        response.setDealAmount(deal.getDealAmount());</span>
+<span class="fc" id="L42">        response.setDealTimestamp(deal.getDealTimestamp());</span>
+
+<span class="fc" id="L44">        return new ResponseEntity&lt;&gt;(response, HttpStatus.CREATED);</span>
+    }
+
+    @GetMapping
+    public ResponseEntity&lt;List&lt;DealResponse&gt;&gt; getAllDeals() {
+        
+        
+<span class="fc" id="L51">        List&lt;Deal&gt; deals = dealService.getAllDeals();</span>
+        
+       
+<span class="fc" id="L54">        List&lt;DealResponse&gt; responses = deals.stream()</span>
+<span class="fc" id="L55">            .map(this::convertToResponse)</span>
+<span class="fc" id="L56">            .collect(Collectors.toList());</span>
+        
+<span class="fc" id="L58">        return ResponseEntity.ok(responses);</span>
+    }
+    
+    
+    private DealResponse convertToResponse(Deal deal) {
+<span class="fc" id="L63">        DealResponse response = new DealResponse();</span>
+<span class="fc" id="L64">        response.setDealUniqueId(deal.getDealUniqueId());</span>
+<span class="fc" id="L65">        response.setFromCurrency(deal.getFromCurrency());</span>
+<span class="fc" id="L66">        response.setToCurrency(deal.getToCurrency());</span>
+<span class="fc" id="L67">        response.setDealAmount(deal.getDealAmount());</span>
+<span class="fc" id="L68">        response.setDealTimestamp(deal.getDealTimestamp());</span>
+<span class="fc" id="L69">        return response;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

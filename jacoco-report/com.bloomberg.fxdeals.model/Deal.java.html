@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Deal.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">fxdeals</a> &gt; <a href="index.source.html" class="el_package">com.bloomberg.fxdeals.model</a> &gt; <span class="el_source">Deal.java</span></div><h1>Deal.java</h1><pre class="source lang-java linenums">package com.bloomberg.fxdeals.model;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = &quot;deals&quot;)
+<span class="fc" id="L9">public class Deal {</span>
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = &quot;deal_unique_id&quot;, nullable = false, unique = true)
+    private String dealUniqueId;
+
+    @Column(name = &quot;from_currency&quot;, nullable = false)
+    private String fromCurrency;
+
+    @Column(name = &quot;to_currency&quot;, nullable = false)
+    private String toCurrency;
+
+    @Column(name = &quot;deal_amount&quot;, nullable = false)
+    private BigDecimal dealAmount;
+
+    @Column(name = &quot;deal_timestamp&quot;, nullable = false)
+    private LocalDateTime dealTimestamp;
+
+  
+
+    public Long getId() {
+<span class="fc" id="L33">        return id;</span>
+    }
+
+    public void setId(Long id) {
+<span class="fc" id="L37">        this.id = id;</span>
+<span class="fc" id="L38">    }</span>
+
+    public String getDealUniqueId() {
+<span class="fc" id="L41">        return dealUniqueId;</span>
+    }
+
+    public void setDealUniqueId(String dealUniqueId) {
+<span class="fc" id="L45">        this.dealUniqueId = dealUniqueId;</span>
+<span class="fc" id="L46">    }</span>
+
+    public String getFromCurrency() {
+<span class="fc" id="L49">        return fromCurrency;</span>
+    }
+
+    public void setFromCurrency(String fromCurrency) {
+<span class="fc" id="L53">        this.fromCurrency = fromCurrency;</span>
+<span class="fc" id="L54">    }</span>
+
+    public String getToCurrency() {
+<span class="fc" id="L57">        return toCurrency;</span>
+    }
+
+    public void setToCurrency(String toCurrency) {
+<span class="fc" id="L61">        this.toCurrency = toCurrency;</span>
+<span class="fc" id="L62">    }</span>
+
+    public BigDecimal getDealAmount() {
+<span class="fc" id="L65">        return dealAmount;</span>
+    }
+
+    public void setDealAmount(BigDecimal dealAmount) {
+<span class="fc" id="L69">        this.dealAmount = dealAmount;</span>
+<span class="fc" id="L70">    }</span>
+
+    public LocalDateTime getDealTimestamp() {
+<span class="fc" id="L73">        return dealTimestamp;</span>
+    }
+
+    public void setDealTimestamp(LocalDateTime dealTimestamp) {
+<span class="fc" id="L77">        this.dealTimestamp = dealTimestamp;</span>
+<span class="fc" id="L78">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

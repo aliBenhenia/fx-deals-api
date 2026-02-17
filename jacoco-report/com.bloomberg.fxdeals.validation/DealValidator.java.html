@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DealValidator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">fxdeals</a> &gt; <a href="index.source.html" class="el_package">com.bloomberg.fxdeals.validation</a> &gt; <span class="el_source">DealValidator.java</span></div><h1>DealValidator.java</h1><pre class="source lang-java linenums">package com.bloomberg.fxdeals.validation;
+
+import com.bloomberg.fxdeals.dto.DealRequest;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Set;
+
+<span class="nc" id="L10">public class DealValidator {</span>
+    
+<span class="fc" id="L12">    private static final Set&lt;String&gt; VALID_CURRENCIES = Set.of(</span>
+        &quot;USD&quot;, &quot;EUR&quot;, &quot;GBP&quot;, &quot;JPY&quot;, &quot;CHF&quot;, &quot;CAD&quot;, &quot;AUD&quot;, &quot;CNY&quot;, 
+        &quot;INR&quot;, &quot;BRL&quot;, &quot;ZAR&quot;, &quot;SGD&quot;, &quot;NZD&quot;, &quot;MXN&quot;, &quot;HKD&quot;, &quot;NOK&quot;,
+        &quot;SEK&quot;, &quot;DKK&quot;, &quot;PLN&quot;, &quot;TRY&quot;, &quot;RUB&quot;, &quot;KRW&quot;, &quot;IDR&quot;, &quot;MYR&quot;
+    );
+    
+    public static void validate(DealRequest request) {
+        
+     
+<span class="fc bfc" id="L21" title="All 4 branches covered.">        if (request.getDealUniqueId() == null || request.getDealUniqueId().trim().isEmpty()) {</span>
+<span class="fc" id="L22">            throw new IllegalArgumentException(&quot;dealUniqueId is required&quot;);</span>
+        }
+<span class="fc bfc" id="L24" title="All 4 branches covered.">        if (request.getFromCurrency() == null || request.getFromCurrency().trim().isEmpty()) {</span>
+<span class="fc" id="L25">            throw new IllegalArgumentException(&quot;fromCurrency is required&quot;);</span>
+        }
+<span class="fc bfc" id="L27" title="All 4 branches covered.">        if (request.getToCurrency() == null || request.getToCurrency().trim().isEmpty()) {</span>
+<span class="fc" id="L28">            throw new IllegalArgumentException(&quot;toCurrency is required&quot;);</span>
+        }
+<span class="fc bfc" id="L30" title="All 2 branches covered.">        if (request.getDealAmount() == null) {</span>
+<span class="fc" id="L31">            throw new IllegalArgumentException(&quot;dealAmount is required&quot;);</span>
+        }
+<span class="fc bfc" id="L33" title="All 2 branches covered.">        if (request.getDealAmount().compareTo(BigDecimal.ZERO) &lt;= 0) {</span>
+<span class="fc" id="L34">            throw new IllegalArgumentException(&quot;dealAmount must be greater than 0&quot;);</span>
+        }
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        if (request.getDealTimestamp() == null) {</span>
+<span class="fc" id="L37">            throw new IllegalArgumentException(&quot;dealTimestamp is required&quot;);</span>
+        }
+        
+        
+<span class="fc bfc" id="L41" title="All 2 branches covered.">        if (!isValidCurrencyCode(request.getFromCurrency())) {</span>
+<span class="fc" id="L42">            throw new IllegalArgumentException(&quot;Invalid fromCurrency: must be 3-letter ISO code (e.g., USD, EUR)&quot;);</span>
+        }
+<span class="fc bfc" id="L44" title="All 2 branches covered.">        if (!isValidCurrencyCode(request.getToCurrency())) {</span>
+<span class="fc" id="L45">            throw new IllegalArgumentException(&quot;Invalid toCurrency: must be 3-letter ISO code (e.g., USD, EUR)&quot;);</span>
+        }
+        
+       
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">        if (!isValidTimestamp(request.getDealTimestamp())) {</span>
+<span class="nc" id="L50">            throw new IllegalArgumentException(&quot;Invalid timestamp format. Use: yyyy-MM-ddTHH:mm:ss (e.g., 2024-02-16T10:30:00)&quot;);</span>
+        }
+<span class="fc" id="L52">    }</span>
+    
+    private static boolean isValidCurrencyCode(String currency) {
+<span class="pc bpc" id="L55" title="1 of 2 branches missed.">        return currency != null &amp;&amp; </span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">               currency.length() == 3 &amp;&amp; </span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">               currency.matches(&quot;[A-Z]{3}&quot;) &amp;&amp;</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">               VALID_CURRENCIES.contains(currency.toUpperCase());</span>
+    }
+    
+    private static boolean isValidTimestamp(LocalDateTime timestamp) {
+        // if (timestamp == null) return false;
+        // try {
+           
+        //     return true;
+        // } catch (Exception e) {
+        //     return false;
+        // }
+<span class="fc" id="L69">            return true;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

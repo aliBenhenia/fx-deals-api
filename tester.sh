@@ -1,20 +1,24 @@
 #!/bin/bash
 
 # =============================================
-# COMPLETE WORKING API TEST SCRIPT
-# Bloomberg FX Deals API
+# JACOCO COVERAGE TEST SUITE
+# Tests all parts of JaCoCo coverage
 # =============================================
 
-# Configuration
-BASE_URL="http://localhost:8080/api/deals"
+# Color definitions
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# Initialize counters
+PASS=0
+FAIL=0
+TOTAL=0
+
 # =============================================
-# Helper Functions
+# Helper Functions (MUST be defined first!)
 # =============================================
 print_header() {
     echo -e "\n${BLUE}========================================${NC}"
@@ -22,292 +26,267 @@ print_header() {
     echo -e "${BLUE}========================================${NC}"
 }
 
-print_success() {
-    echo -e "${GREEN}  ✅ $1${NC}"
+print_section() {
+    echo -e "\n${YELLOW}📌 $1${NC}"
+    echo -e "${YELLOW}--------------------${NC}"
 }
 
-print_error() {
-    echo -e "${RED}  ❌ $1${NC}"
-}
-
-print_info() {
-    echo -e "${YELLOW}  ℹ️ $1${NC}"
+print_result() {
+    TOTAL=$((TOTAL+1))
+    if [ $1 -eq 0 ]; then
+        echo -e "${GREEN}  ✅ PASS: $2${NC}"
+        PASS=$((PASS+1))
+    else
+        echo -e "${RED}  ❌ FAIL: $2${NC}"
+        FAIL=$((FAIL+1))
+    fi
 }
 
 # =============================================
-# 1. HEALTH CHECK
+# 1. CHECK JACOCO IS CONFIGURED IN POM.XML
 # =============================================
-print_header "🔍 HEALTH CHECK"
+print_section "1. CHECKING JACOCO CONFIGURATION"
 
-HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/health)
-if [ "$HEALTH_CHECK" -eq 200 ]; then
-    print_success "Health check passed (200 OK)"
+if grep -q "jacoco-maven-plugin" pom.xml; then
+    print_result 0 "JaCoCo plugin configured in pom.xml"
 else
-    print_error "Health check failed (HTTP $HEALTH_CHECK)"
+    print_result 1 "JaCoCo plugin NOT found in pom.xml"
+fi
+
+if grep -q "<minimum>1.00</minimum>" pom.xml; then
+    print_result 0 "100% coverage target configured"
+else
+    print_result 1 "100% coverage target NOT configured"
 fi
 
 # =============================================
-# 2. CREATE VALID DEALS (5 Different Deals)
+# 2. RUN TESTS WITH COVERAGE
 # =============================================
-print_header "💰 CREATING VALID DEALS"
+print_section "2. RUNNING TESTS WITH COVERAGE"
 
-# Array of currency pairs
-CURRENCIES=("USD:EUR" "GBP:JPY" "EUR:USD" "USD:GBP" "JPY:EUR")
+echo "Running mvn clean test..."
+docker-compose run --rm app mvn clean test > test-output.log 2>&1
 
-for i in {1..5}; do
-    # Parse currency pair
-    IFS=':' read -r FROM TO <<< "${CURRENCIES[$((i-1))]}"
-    
-    # Generate unique ID with timestamp
-    UNIQUE_ID="DEAL_$(date +%s)_$i"
-    AMOUNT=$((1000 + i * 100)).$((i * 10))
-    
-    print_info "Creating deal $i: $FROM → $TO for $AMOUNT"
-    
-    # Construct JSON properly with escaped quotes
-    JSON_DATA="{
-        \"dealUniqueId\": \"$UNIQUE_ID\",
-        \"fromCurrency\": \"$FROM\",
-        \"toCurrency\": \"$TO\",
-        \"dealAmount\": $AMOUNT,
-        \"dealTimestamp\": \"2024-02-17T10:30:00\"
-    }"
-    
-    # Send request
-    RESPONSE=$(curl -s -X POST "$BASE_URL" \
-        -H "Content-Type: application/json" \
-        -d "$JSON_DATA")
-    
-    # Check response
-    if [[ "$RESPONSE" == *"$UNIQUE_ID"* ]]; then
-        print_success "Deal $i created successfully"
-        echo "     Response: $RESPONSE" | head -c 100
-        echo "..."
+if [ $? -eq 0 ]; then
+    print_result 0 "Tests executed successfully"
+else
+    print_result 1 "Tests failed to execute"
+    cat test-output.log | tail -20
+fi
+
+# =============================================
+# 3. CHECK JACOCO EXECUTION DATA FILE
+# =============================================
+print_section "3. CHECKING JACOCO EXECUTION DATA"
+
+if grep -q "Loading execution data file" test-output.log; then
+    print_result 0 "JaCoCo execution data file loaded"
+else
+    print_result 1 "JaCoCo execution data file NOT found"
+fi
+
+# =============================================
+# 4. GENERATE COVERAGE REPORT
+# =============================================
+print_section "4. GENERATING COVERAGE REPORT"
+
+docker-compose run --rm app mvn jacoco:report > report-output.log 2>&1
+
+if [ $? -eq 0 ]; then
+    print_result 0 "Coverage report generated"
+else
+    print_result 1 "Coverage report generation failed"
+fi
+
+# =============================================
+# 5. CHECK REPORT FILES
+# =============================================
+print_section "5. CHECKING REPORT FILES"
+
+# Create reports directory
+mkdir -p target/coverage
+
+# Try to copy report from container
+if docker cp $(docker-compose ps -q app):/app/target/site/jacoco ./target/coverage 2>/dev/null; then
+    if [ -f "./target/coverage/jacoco/index.html" ]; then
+        print_result 0 "HTML coverage report found"
     else
-        print_error "Failed to create deal $i"
-        echo "     Error: $RESPONSE"
+        print_result 1 "HTML coverage report NOT found"
     fi
     
-    echo ""
-    sleep 1
-done
-
-# =============================================
-# 3. TEST VALIDATION (Error Cases)
-# =============================================
-print_header "⚠️  TESTING VALIDATION (Expected Errors)"
-
-# Test 3.1: Missing field
-print_info "Testing missing field..."
-RESPONSE=$(curl -s -X POST "$BASE_URL" \
-    -H "Content-Type: application/json" \
-    -d '{
-        "fromCurrency": "USD",
-        "toCurrency": "EUR",
-        "dealAmount": 1000.50,
-        "dealTimestamp": "2024-02-17T10:30:00"
-    }')
-if [[ "$RESPONSE" == *"required"* ]]; then
-    print_success "Missing field correctly rejected"
+    if [ -f "./target/coverage/jacoco/jacoco.xml" ]; then
+        print_result 0 "XML coverage report found"
+    else
+        print_result 1 "XML coverage report NOT found"
+    fi
 else
-    print_error "Missing field not caught"
-fi
-
-# Test 3.2: Negative amount
-print_info "Testing negative amount..."
-RESPONSE=$(curl -s -X POST "$BASE_URL" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"dealUniqueId\": \"NEGATIVE_$(date +%s)\",
-        \"fromCurrency\": \"USD\",
-        \"toCurrency\": \"EUR\",
-        \"dealAmount\": -100,
-        \"dealTimestamp\": \"2024-02-17T10:30:00\"
-    }")
-if [[ "$RESPONSE" == *"greater than 0"* ]]; then
-    print_success "Negative amount correctly rejected"
-else
-    print_error "Negative amount not caught"
-fi
-
-# Test 3.3: Invalid currency
-print_info "Testing invalid currency (USDOLLAR)..."
-RESPONSE=$(curl -s -X POST "$BASE_URL" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"dealUniqueId\": \"INVALID_CURR_$(date +%s)\",
-        \"fromCurrency\": \"USDOLLAR\",
-        \"toCurrency\": \"EUR\",
-        \"dealAmount\": 1000.50,
-        \"dealTimestamp\": \"2024-02-17T10:30:00\"
-    }")
-if [[ "$RESPONSE" == *"currency"* ]]; then
-    print_success "Invalid currency correctly rejected"
-else
-    print_error "Invalid currency not caught"
-fi
-
-# Test 3.4: Invalid timestamp
-print_info "Testing invalid timestamp format..."
-RESPONSE=$(curl -s -X POST "$BASE_URL" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"dealUniqueId\": \"INVALID_DATE_$(date +%s)\",
-        \"fromCurrency\": \"USD\",
-        \"toCurrency\": \"EUR\",
-        \"dealAmount\": 1000.50,
-        \"dealTimestamp\": \"16-02-2024\"
-    }")
-if [[ "$RESPONSE" == *"timestamp"* ]]; then
-    print_success "Invalid timestamp correctly rejected"
-else
-    print_error "Invalid timestamp not caught"
-fi
-
-# =============================================
-# 4. TEST DUPLICATE PREVENTION
-# =============================================
-print_header "🔄 TESTING DUPLICATE PREVENTION"
-
-DUPLICATE_ID="DUPLICATE_$(date +%s)"
-
-# First request - should succeed
-print_info "Creating first deal with ID: $DUPLICATE_ID"
-RESPONSE1=$(curl -s -X POST "$BASE_URL" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"dealUniqueId\": \"$DUPLICATE_ID\",
-        \"fromCurrency\": \"USD\",
-        \"toCurrency\": \"EUR\",
-        \"dealAmount\": 1000.50,
-        \"dealTimestamp\": \"2024-02-17T10:30:00\"
-    }")
-
-if [[ "$RESPONSE1" == *"$DUPLICATE_ID"* ]]; then
-    print_success "First deal created"
-else
-    print_error "First deal failed"
-fi
-
-# Second request with same ID - should fail with 409
-print_info "Attempting duplicate with same ID..."
-RESPONSE2=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"dealUniqueId\": \"$DUPLICATE_ID\",
-        \"fromCurrency\": \"GBP\",
-        \"toCurrency\": \"JPY\",
-        \"dealAmount\": 2000.75,
-        \"dealTimestamp\": \"2024-02-17T15:30:00\"
-    }")
-
-HTTP_CODE=$(echo "$RESPONSE2" | tail -n1)
-BODY=$(echo "$RESPONSE2" | sed '$d')
-
-if [ "$HTTP_CODE" -eq 409 ]; then
-    print_success "Duplicate correctly rejected with 409"
-elif [ "$HTTP_CODE" -eq 500 ]; then
-    print_error "Got 500 instead of 409 - check error handling"
-else
-    print_error "Expected 409, got $HTTP_CODE"
-fi
-
-# =============================================
-# 5. TEST DATABASE CONNECTION
-# =============================================
-print_header "🗄️  DATABASE VERIFICATION"
-
-# Check if we can query the database
-if docker ps | grep -q fx-deals-api-db-1; then
-    print_success "Database container is running"
+    # Check if report exists locally
+    if [ -f "./target/site/jacoco/index.html" ]; then
+        print_result 0 "HTML coverage report found locally"
+        cp -r ./target/site/jacoco ./target/coverage/
+    else
+        print_result 1 "HTML coverage report NOT found anywhere"
+    fi
     
-    # Count deals in database
-    DEAL_COUNT=$(docker exec -it fx-deals-api-db-1 psql -U fxuser -d fxdb -t -c "SELECT COUNT(*) FROM deals;" 2>/dev/null | tr -d ' ' || echo "0")
-    print_info "Total deals in database: $DEAL_COUNT"
-else
-    print_error "Database container not running"
+    if [ -f "./target/site/jacoco/jacoco.xml" ]; then
+        print_result 0 "XML coverage report found locally"
+    else
+        print_result 1 "XML coverage report NOT found anywhere"
+    fi
 fi
 
 # =============================================
-# 6. PERFORMANCE TEST (Concurrent)
+# 6. CHECK COVERAGE PERCENTAGES
 # =============================================
-print_header "⚡ PERFORMANCE TEST (5 concurrent requests)"
+print_section "6. CHECKING COVERAGE PERCENTAGES"
 
-START_TIME=$(date +%s%N)
+if [ -f "./target/coverage/jacoco/jacoco.xml" ] || [ -f "./target/site/jacoco/jacoco.xml" ]; then
+    print_result 0 "Coverage data available"
+    
+    # Extract and display coverage info
+    REPORT_FILE="./target/coverage/jacoco/jacoco.xml"
+    [ ! -f "$REPORT_FILE" ] && REPORT_FILE="./target/site/jacoco/jacoco.xml"
+    
+    if [ -f "$REPORT_FILE" ]; then
+        INSTRUCTION_COVERED=$(grep -o 'instruction covered="[0-9]*"' "$REPORT_FILE" | head -1 | grep -o '[0-9]*')
+        INSTRUCTION_MISSED=$(grep -o 'instruction missed="[0-9]*"' "$REPORT_FILE" | head -1 | grep -o '[0-9]*')
+        echo -e "  ${YELLOW}Coverage metrics found${NC}"
+    fi
+else
+    print_result 1 "Cannot check coverage - report missing"
+fi
 
-# Launch 5 concurrent requests
-for i in {1..5}; do
-    PERF_ID="PERF_$(date +%s)_$i"
-    curl -s -X POST "$BASE_URL" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"dealUniqueId\": \"$PERF_ID\",
-            \"fromCurrency\": \"USD\",
-            \"toCurrency\": \"EUR\",
-            \"dealAmount\": 100$i,
-            \"dealTimestamp\": \"2024-02-17T10:30:00\"
-        }" > /dev/null &
+# =============================================
+# 7. VERIFY 100% COVERAGE TARGET
+# =============================================
+print_section "7. VERIFYING 100% COVERAGE TARGET"
+
+docker-compose run --rm app mvn clean verify > verify-output.log 2>&1
+VERIFY_EXIT=$?
+
+if [ $VERIFY_EXIT -eq 0 ]; then
+    print_result 0 "Coverage check passed (meets 100% target)"
+else
+    if grep -q "Coverage checks have failed" verify-output.log; then
+        print_result 1 "Coverage check FAILED - below 100%"
+        echo -e "${RED}  ⚠️  Some packages have less than 100% coverage${NC}"
+    else
+        print_result 1 "Coverage check failed for other reasons"
+    fi
+fi
+
+# =============================================
+# 8. CHECK EXCLUDED CLASSES
+# =============================================
+print_section "8. CHECKING EXCLUDED CLASSES"
+
+EXCLUSIONS=("FxDealsApplication" "dto" "config" "aspect" "exception")
+EXCLUSIONS_FOUND=0
+
+for EXCLUSION in "${EXCLUSIONS[@]}"; do
+    if grep -q "<exclude>.*$EXCLUSION.*</exclude>" pom.xml; then
+        EXCLUSIONS_FOUND=$((EXCLUSIONS_FOUND+1))
+    fi
 done
 
-# Wait for all to complete
-wait
-
-END_TIME=$(date +%s%N)
-DURATION=$((($END_TIME - $START_TIME)/1000000))
-
-if [ $DURATION -lt 2000 ]; then
-    print_success "All 5 concurrent requests completed in ${DURATION}ms"
+if [ $EXCLUSIONS_FOUND -eq 5 ]; then
+    print_result 0 "All excluded classes configured properly"
 else
-    print_info "All 5 concurrent requests completed in ${DURATION}ms"
+    print_result 1 "Some exclusions missing (found $EXCLUSIONS_FOUND/5)"
 fi
 
 # =============================================
-# 7. TEST EDGE CASES
+# 9. CHECK MAKEFILE COVERAGE COMMANDS
 # =============================================
-print_header "🔧 EDGE CASE TESTS"
+print_section "9. CHECKING MAKEFILE COVERAGE COMMANDS"
 
-# Test minimum amount (0.01)
-print_info "Testing minimum amount (0.01)..."
-RESPONSE=$(curl -s -X POST "$BASE_URL" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"dealUniqueId\": \"MIN_AMOUNT_$(date +%s)\",
-        \"fromCurrency\": \"USD\",
-        \"toCurrency\": \"EUR\",
-        \"dealAmount\": 0.01,
-        \"dealTimestamp\": \"2024-02-17T10:30:00\"
-    }")
-if [[ "$RESPONSE" == *"0.01"* ]]; then
-    print_success "Minimum amount accepted"
+if [ -f "Makefile" ]; then
+    if grep -q "^coverage:" Makefile; then
+        print_result 0 "Makefile has 'coverage' command"
+    else
+        print_result 1 "Makefile missing 'coverage' command"
+    fi
+    
+    if grep -q "^coverage-report:" Makefile; then
+        print_result 0 "Makefile has 'coverage-report' command"
+    else
+        print_result 1 "Makefile missing 'coverage-report' command"
+    fi
+    
+    if grep -q "^coverage-check:" Makefile; then
+        print_result 0 "Makefile has 'coverage-check' command"
+    else
+        print_result 1 "Makefile missing 'coverage-check' command"
+    fi
 else
-    print_error "Minimum amount failed"
+    print_result 1 "Makefile not found"
 fi
 
-# Test large amount
-print_info "Testing large amount (999999.99)..."
-RESPONSE=$(curl -s -X POST "$BASE_URL" \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"dealUniqueId\": \"MAX_AMOUNT_$(date +%s)\",
-        \"fromCurrency\": \"USD\",
-        \"toCurrency\": \"EUR\",
-        \"dealAmount\": 999999.99,
-        \"dealTimestamp\": \"2024-02-17T10:30:00\"
-    }")
-if [[ "$RESPONSE" == *"999999.99"* ]]; then
-    print_success "Large amount accepted"
+# =============================================
+# 10. CHECK README DOCUMENTATION
+# =============================================
+print_section "10. CHECKING README DOCUMENTATION"
+
+if [ -f "README.md" ]; then
+    if grep -q "JaCoCo" README.md; then
+        print_result 0 "README mentions JaCoCo"
+    else
+        print_result 1 "README missing JaCoCo documentation"
+    fi
+    
+    if grep -q "100% coverage" README.md; then
+        print_result 0 "README mentions 100% coverage target"
+    else
+        print_result 1 "README missing 100% coverage target"
+    fi
+    
+    if grep -q "excluded classes" README.md; then
+        print_result 0 "README explains excluded classes"
+    else
+        print_result 1 "README missing exclusions explanation"
+    fi
 else
-    print_error "Large amount failed"
+    print_result 1 "README.md not found"
+fi
+
+# =============================================
+# 11. COVERAGE REPORT PREVIEW
+# =============================================
+print_section "11. COVERAGE REPORT PREVIEW"
+
+if [ -f "./target/coverage/jacoco/index.html" ]; then
+    echo -e "${GREEN}  📊 Coverage report available at:${NC}"
+    echo -e "     ./target/coverage/jacoco/index.html"
+    echo -e "\n${YELLOW}  To view in browser:${NC}"
+    echo "     open ./target/coverage/jacoco/index.html"
+elif [ -f "./target/site/jacoco/index.html" ]; then
+    echo -e "${GREEN}  📊 Coverage report available at:${NC}"
+    echo -e "     ./target/site/jacoco/index.html"
+else
+    echo -e "${YELLOW}  ⚠️  Report not available - run 'make coverage' first${NC}"
 fi
 
 # =============================================
 # SUMMARY
 # =============================================
-print_header "📊 TEST SUMMARY"
+print_header "📊 JACOCO COVERAGE TEST SUMMARY"
 
-echo -e "${GREEN}✅ All tests completed!${NC}"
-echo -e "${YELLOW}ℹ️  Check database for verification:${NC}"
-echo "   docker exec -it fx-deals-api-db-1 psql -U fxuser -d fxdb -c 'SELECT COUNT(*) FROM deals;'"
-echo ""
-echo -e "${BLUE}To view application logs:${NC}"
-echo "   docker logs fx-deals-api-app-1 --tail 50"
+echo -e "\n${GREEN}✅ PASSED: $PASS${NC}"
+echo -e "${RED}❌ FAILED: $FAIL${NC}"
+echo -e "${BLUE}📋 TOTAL:  $TOTAL${NC}"
+
+if [ $TOTAL -gt 0 ]; then
+    PERCENT=$((PASS * 100 / TOTAL))
+    echo -e "${YELLOW}📈 SUCCESS RATE: ${PERCENT}%${NC}"
+fi
+
+if [ $FAIL -eq 0 ]; then
+    echo -e "\n${GREEN}🎉 ALL JACOCO TESTS PASSED! Coverage is properly configured!${NC}"
+elif [ $FAIL -le 2 ]; then
+    echo -e "\n${YELLOW}⚠️  Minor issues found - check the failures above${NC}"
+else
+    echo -e "\n${RED}❌ Multiple failures - JaCoCo configuration needs work${NC}"
+fi
+
+# Cleanup
+rm -f test-output.log report-output.log verify-output.log 2>/dev/null

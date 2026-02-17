@@ -3,8 +3,6 @@ package com.bloomberg.fxdeals.validation;
 import com.bloomberg.fxdeals.dto.DealRequest;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Set;
 
 public class DealValidator {
@@ -17,7 +15,6 @@ public class DealValidator {
     
     public static void validate(DealRequest request) {
         
-     
         if (request.getDealUniqueId() == null || request.getDealUniqueId().trim().isEmpty()) {
             throw new IllegalArgumentException("dealUniqueId is required");
         }
@@ -37,7 +34,6 @@ public class DealValidator {
             throw new IllegalArgumentException("dealTimestamp is required");
         }
         
-        
         if (!isValidCurrencyCode(request.getFromCurrency())) {
             throw new IllegalArgumentException("Invalid fromCurrency: must be 3-letter ISO code (e.g., USD, EUR)");
         }
@@ -45,7 +41,6 @@ public class DealValidator {
             throw new IllegalArgumentException("Invalid toCurrency: must be 3-letter ISO code (e.g., USD, EUR)");
         }
         
-       
         if (!isValidTimestamp(request.getDealTimestamp())) {
             throw new IllegalArgumentException("Invalid timestamp format. Use: yyyy-MM-ddTHH:mm:ss (e.g., 2024-02-16T10:30:00)");
         }
@@ -59,12 +54,12 @@ public class DealValidator {
     }
     
     private static boolean isValidTimestamp(LocalDateTime timestamp) {
-        if (timestamp == null) return false;
-        try {
-           
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        LocalDateTime now = LocalDateTime.now();
+        
+        // Allow timestamps within last 30 days and next 1 day
+        boolean notTooOld = !timestamp.isBefore(now.minusDays(30));
+        boolean notTooFuture = !timestamp.isAfter(now.plusDays(1));
+        
+        return notTooOld && notTooFuture;
     }
 }

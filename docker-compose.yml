@@ -23,6 +23,7 @@ services:
       - ./src:/app/src                # 🟢 LIVE CODE SYNC!
       - ./pom.xml:/app/pom.xml        # 🟢 Sync pom.xml for dependencies
       - ~/.m2:/root/.m2               # 🟢 Cache Maven dependencies
+      
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/fxdb
       SPRING_DATASOURCE_USERNAME: fxuser
