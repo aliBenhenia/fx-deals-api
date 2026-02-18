@@ -2,7 +2,7 @@
 services:
   db:
     image: postgres:15
-    environment:
+    environment: # this is truely must come from .env file, i just hardcoded here for simplicity for you to run it fast....
       POSTGRES_USER: fxuser
       POSTGRES_PASSWORD: fxpass
       POSTGRES_DB: fxdb
@@ -22,7 +22,7 @@ services:
       - db
      
       
-    environment:
+    environment: 
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/fxdb
       SPRING_DATASOURCE_USERNAME: fxuser
       SPRING_DATASOURCE_PASSWORD: fxpass

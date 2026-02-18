@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Running K6 performance test..."
+echo "Running K6 performance test..."
 echo "================================="
 
 

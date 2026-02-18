@@ -8,7 +8,7 @@ NC := \033[0m
 
 # Start DB + app
 up:
-	docker compose up --build
+	docker compose up -d --build
 
 # Stop everything
 down:

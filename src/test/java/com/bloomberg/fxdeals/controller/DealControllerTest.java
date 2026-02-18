@@ -55,7 +55,7 @@ class DealControllerTest {
             validRequest.setFromCurrency("USD");
             validRequest.setToCurrency("EUR");
             validRequest.setDealAmount(new BigDecimal("1000.50"));
-            validRequest.setDealTimestamp(now);  // Use current time
+            validRequest.setDealTimestamp(now);  
 
             validDeal = new Deal();
             validDeal.setId(1L);
@@ -87,7 +87,7 @@ class DealControllerTest {
     @Test
     void createDeal_ShouldReturn400_WhenValidationFails() throws Exception {
         DealRequest invalidRequest = new DealRequest();
-        invalidRequest.setFromCurrency("USD"); // Missing dealUniqueId
+        invalidRequest.setFromCurrency("USD"); 
 
         mockMvc.perform(post("/api/deals")
                 .contentType(MediaType.APPLICATION_JSON)

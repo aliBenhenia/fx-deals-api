@@ -52,18 +52,14 @@ public class DealIntegrationTest {
         validRequest.setDealAmount(new BigDecimal("1000.50"));
         validRequest.setDealTimestamp(LocalDateTime.now());
 
-        // Clean up any existing test data
         dealRepository.findByDealUniqueId(validRequest.getDealUniqueId())
             .ifPresent(deal -> dealRepository.delete(deal));
     }
 
-    // ===== TEST 1: Tests run against real DB =====
     @Test
     void test1_ShouldRunAgainstRealDatabase() {
-        // This test verifies that tests are running against a real PostgreSQL database
         assertThat(dealRepository).isNotNull();
         
-        // Save a deal directly to verify DB connection
         Deal deal = new Deal();
         deal.setDealUniqueId("DB_TEST_" + System.currentTimeMillis());
         deal.setFromCurrency("USD");
@@ -74,28 +70,23 @@ public class DealIntegrationTest {
         Deal saved = dealRepository.save(deal);
         assertThat(saved.getId()).isNotNull();
         
-        // Verify we can retrieve it
         Optional<Deal> found = dealRepository.findById(saved.getId());
         assertThat(found).isPresent();
         assertThat(found.get().getDealUniqueId()).isEqualTo(deal.getDealUniqueId());
     }
 
-    // ===== TEST 2: Persistence behavior tested =====
     @Test
     void test2_ShouldPersistDealToDatabase() {
-        // Send HTTP request to create deal
         ResponseEntity<Deal> response = restTemplate.postForEntity(
             baseUrl,
             validRequest,
             Deal.class
         );
 
-        // Verify HTTP response
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getDealUniqueId()).isEqualTo(validRequest.getDealUniqueId());
 
-        // Verify data is actually in database
         Optional<Deal> found = dealRepository.findByDealUniqueId(validRequest.getDealUniqueId());
         assertThat(found).isPresent();
         assertThat(found.get().getFromCurrency()).isEqualTo("USD");
@@ -103,10 +94,8 @@ public class DealIntegrationTest {
         assertThat(found.get().getDealAmount()).isEqualTo(new BigDecimal("1000.50"));
     }
 
-    // ===== TEST 3: Deduplication tested at DB level =====
     @Test
     void test3_ShouldPreventDuplicateAtDatabaseLevel() {
-        // First request - should succeed
         ResponseEntity<Deal> firstResponse = restTemplate.postForEntity(
             baseUrl,
             validRequest,
@@ -117,7 +106,6 @@ public class DealIntegrationTest {
         // Verify it's in database
         assertThat(dealRepository.findByDealUniqueId(validRequest.getDealUniqueId())).isPresent();
 
-        // Second request with same ID - should fail with 409
         ResponseEntity<String> secondResponse = restTemplate.postForEntity(
             baseUrl,
             validRequest,
@@ -133,15 +121,12 @@ public class DealIntegrationTest {
         assertThat(count).isEqualTo(1);
     }
 
-    // ===== TEST 4: Transaction behavior tested =====
     @Test
     void test4_ShouldRollbackOnException() {
-        // This tests transaction behavior - we'll try to save multiple deals
-        // and verify that if one fails, others are not saved (if transactional)
+        
         
         String batchId = "BATCH_" + System.currentTimeMillis();
         
-        // Create 3 valid deals
         for (int i = 1; i <= 3; i++) {
             DealRequest request = new DealRequest();
             request.setDealUniqueId(batchId + "_" + i);
@@ -158,7 +143,6 @@ public class DealIntegrationTest {
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         }
         
-        // Verify all 3 were saved
         for (int i = 1; i <= 3; i++) {
             assertThat(dealRepository.findByDealUniqueId(batchId + "_" + i)).isPresent();
         }
@@ -170,7 +154,6 @@ public class DealIntegrationTest {
     /// ===== TEST 5: Integration tests included in coverage =====
 @Test
 void test5_ShouldVerifyAllFieldsAreMappedCorrectly() {
-    // Test that all fields are properly persisted
     DealRequest request = new DealRequest();
     String uniqueId = "MAPPING_TEST_" + System.currentTimeMillis();
     request.setDealUniqueId(uniqueId);
@@ -198,7 +181,6 @@ void test5_ShouldVerifyAllFieldsAreMappedCorrectly() {
     assertThat(deal.getToCurrency()).isEqualTo("JPY");
     assertThat(deal.getDealAmount()).isEqualTo(new BigDecimal("9876.54"));
     
-    // ✅ FIX: Compare timestamps without nanoseconds
     assertThat(deal.getDealTimestamp().truncatedTo(java.time.temporal.ChronoUnit.SECONDS))
         .isEqualTo(timestamp.truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
 }
@@ -206,7 +188,6 @@ void test5_ShouldVerifyAllFieldsAreMappedCorrectly() {
     // ===== TEST 6: Batch insert with duplicate =====
     @Test
     void test6_ShouldHandleBatchWithDuplicate() {
-        // This tests partial success semantics
         String batchPrefix = "BATCH_DUP_" + System.currentTimeMillis();
         
         // Create first deal
