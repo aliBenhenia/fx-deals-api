@@ -140,7 +140,7 @@ public class AssignmentApiTest {
         given().get().then().statusCode(200);
     }
 
-    /
+    
     @Test
     void minimumAmount_ShouldSucceed() {
         String uniqueId = "MIN-001-" + System.currentTimeMillis();  // ← FIXED
